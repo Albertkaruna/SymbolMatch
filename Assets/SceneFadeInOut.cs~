@@ -1,0 +1,10 @@
+﻿using UnityEngine;
+using System.Collections;
+
+public class SceneFadeInOut : MonoBehaviour
+{
+    void Start()
+    {
+        iTween.FadeTo(gameObject, 0, 1f);
+    }
+}

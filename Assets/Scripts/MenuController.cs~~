@@ -1,0 +1,300 @@
+﻿using UnityEngine;
+using System.Collections;
+using UnityEngine.UI;
+using UnityEngine.SceneManagement;
+using StartApp;
+
+public class MenuController : MonoBehaviour
+{
+	public AudioSource SoundEffect;
+	public Sprite Icon1, Icon2;
+	public AudioClip One, Two;
+	public Text ScoreTxt, NewScoreTxt, HighScoreTxt1, HighScoreTxt2, DiamondScore;
+	public GameObject[] Things;
+	public RectTransform ScrollContent;
+	public Sprite[] GroupIcons;
+	public GameObject DiamondEff1, DiamondEff2, UnlockEff, VideoRewardEffect;
+	public GameObject AdButton, SplashScreen;
+	public Animator ExitAnim, MainMenuAnim;
+	[HideInInspector]
+	public int Score, HScorePP, HScoreTemp, VidAdCount, ExitPressCount, InterstitialAdCount;
+	private bool s, paused, Once1, Once2;
+	private PlayerController Player;
+	private Button PlayButton;
+	public static int PermScore, Unlocked;
+	private AudioListener audioListener;
+
+	void Awake()
+	{
+		PlayerPrefs.DeleteAll();
+		PermScore = PlayerPrefs.GetInt("PermScore");
+		PermScore = 199;
+		HScorePP = PlayerPrefs.GetInt("HScore");
+		HScorePP = 920;
+
+
+	}
+
+
+	// Use this for initialization
+	void Start()
+	{
+		SplashScreen.SetActive(true);
+		Invoke("CloseSplash", 3f);
+		s = true;
+		paused = false;
+		Score = 0;
+		VidAdCount = 0;
+		InterstitialAdCount = 0;
+		Once1 = true;
+		Once2 = true;
+		HighScoreTxt1.text = HScorePP.ToString();
+		Player = GameObject.FindGameObjectWithTag("Player").GetComponent<PlayerController>();
+		UnlockSets();
+		DiamondScore.text = PermScore.ToString();
+		audioListener = Camera.main.GetComponent<AudioListener>();
+
+		#if UNITY_ANDROID
+		StartAppWrapper.init();
+		StartAppWrapper.loadAd();
+		VideoListenerImplementation videoListener = new VideoListenerImplementation();
+		StartAppWrapper.setVideoListener(videoListener);
+		StartAppWrapper.loadAd(StartAppWrapper.AdMode.REWARDED_VIDEO);
+		#endif
+
+	}
+
+	void CloseSplash()
+	{
+		SplashScreen.SetActive(false);
+		MainMenuAnim.enabled = true;
+	}
+
+	public class VideoListenerImplementation : StartAppWrapper.VideoListener
+	{
+		MenuController MenuControl = new MenuController();
+
+		public void onVideoCompleted()
+		{
+			// Grant user with the reward
+			Destroy(Instantiate(MenuControl.VideoRewardEffect), 3.5f);
+			MenuControl.IncreaseDiamond();
+		}
+	}
+
+
+	public void IncreaseDiamond()
+	{
+		Invoke("IncreaseNow", 3f);
+	}
+
+	void IncreaseNow()
+	{
+		PlayerPrefs.SetInt("PermScore", PermScore + 15);
+	}
+
+	// Update is called once per frame
+	void Update()
+	{
+		DiamondScore.text = PermScore.ToString();
+		if (Score > 9 && Score % 10 == 0 && Once1)
+		{ 
+			Once1 = false;
+			PlayerPrefs.SetInt("PermScore", PermScore++);
+			//Effect goes here
+			Destroy(Instantiate(DiamondEff1, new Vector2(2.1f, 2.5f), Quaternion.identity), 0.7f);
+		}
+
+		if (Score > 29 && Score % 30 == 0 && Once2)
+		{
+			Once2 = false;
+			PlayerPrefs.SetInt("PermScore", PermScore += 3);
+			Destroy(Instantiate(DiamondEff2, new Vector2(2.1f, 2.5f), Quaternion.identity), 0.7f);
+		}
+		if (Input.GetKeyDown(KeyCode.Escape))
+		{
+			ExitPressCount++;
+			if (ExitPressCount >= 2)
+			{
+				Application.Quit();
+			}
+			ExitAnim.SetBool("exit", true);
+			Invoke("HideExitText", 2);
+		}
+	}
+
+	void HideExitText()
+	{
+		ExitPressCount = 0;
+		ExitAnim.SetBool("exit", false);
+	}
+
+	public void TrueOnce()
+	{
+		if (Score % 10 == 1)
+		{
+			Once1 = true;
+			Once2 = true;
+		}
+	}
+
+	public void UnlockEffect()
+	{
+		// Effect hoes here
+		Destroy(Instantiate(UnlockEff), 6f);
+		Player.CanInvoke = false;
+		Player.SymCount += 5;
+		PlayerPrefs.SetInt("Unlock", Unlocked += 1);
+		UnlockSets();
+
+	}
+
+	public void VideoAdButton()
+	{
+		// Show ad and give reward for the ad
+		ShowRewardedAds();
+	}
+
+
+	public void SoundEff(Image b)
+	{
+		SoundEffect.enabled = !SoundEffect.enabled;
+		if (s)
+		{
+			s = false;
+			b.sprite = Icon2;
+			audioListener.enabled = false;
+		}
+		else if (!s)
+		{
+			s = true;
+			b.sprite = Icon1;
+			audioListener.enabled = true;
+		}
+	}
+
+
+	void UnlockSets()
+	{
+		Unlocked = PlayerPrefs.GetInt("Unlock");
+		if (Unlocked == 1)
+		{
+			// First set unlocked and pause the game and show the effect
+			ScrollContent.GetChild(1).GetComponent<Image>().sprite = GroupIcons[0];
+		}
+		else if (Unlocked == 2)
+		{
+			// Second set unlocked and pause the game and show the effect
+			ScrollContent.GetChild(2).GetComponent<Image>().sprite = GroupIcons[1];
+		}
+		else if (Unlocked == 3)
+		{
+			// Third set unlocked and pause the game and show the effect
+			ScrollContent.GetChild(3).GetComponent<Image>().sprite = GroupIcons[2];
+		}
+		else if (Unlocked == 4)
+		{
+			// Fourth set unlocked and pause the game and show the effect
+			ScrollContent.GetChild(4).GetComponent<Image>().sprite = GroupIcons[3];
+		}
+		else if (Unlocked == 5)
+		{
+			// Fifth set unlocked and pause the game and show the effect
+			ScrollContent.GetChild(5).GetComponent<Image>().sprite = GroupIcons[4];
+		}
+	}
+
+	public void Restart()
+	{
+		HScorePP = PlayerPrefs.GetInt("HScore");
+		HighScoreTxt1.text = HScorePP.ToString();
+		Score = 0;
+		ScoreTxt.text = "0";
+		Things[4].GetComponent<Animator>().SetBool("restart", true);
+	}
+
+	IEnumerator GetScene(int l)
+	{
+		yield return new WaitForSeconds(0.5f);
+		SceneManager.LoadSceneAsync(l);
+	}
+
+
+	public void Twitter()
+	{
+		Application.OpenURL("https://twitter.com/hyper_zeta");
+	}
+
+	public void Facebook()
+	{
+		Application.OpenURL("https://www.facebook.com/HyperZeta-522463037937722");
+	}
+
+
+	public void Play(Button b)
+	{
+		b.interactable = false;
+		PlayButton = b;
+		Things[0].GetComponent<Animator>().SetBool("mainmenu", true);
+	}
+
+	public void Sound()
+	{
+
+	}
+
+	public void Share()
+	{
+
+	}
+
+	public void SymbolGroupPanel(GameObject GroupPanel)
+	{
+		GroupPanel.GetComponent<Animator>().SetBool("scroll", true);
+	}
+
+	public void SymbolGroupExit(GameObject GroupPanel)
+	{
+		GroupPanel.GetComponent<Animator>().SetBool("scroll", false);
+	}
+
+	public void CallWaitAndDo(int w)
+	{
+		StartCoroutine(WaitAndDo(w));
+	}
+
+	IEnumerator WaitAndDo(int k)
+	{
+		if (k == 0)
+		{
+			Things[0].SetActive(false);
+			yield return new WaitForSeconds(0.5f);
+			Player.CanInvoke = true;
+			Player.SymbolsGenerator();
+		}
+		else if (k == 1)
+		{
+			PlayButton.interactable = true;
+			Things[4].SetActive(false);
+			Things[0].SetActive(true);
+			Things[0].GetComponent<Animator>().SetBool("mainmenu", false);
+		}
+	}
+
+	public void ShowInterstitialAds()
+	{
+		#if UNITY_ANDROID
+		StartAppWrapper.showAd();
+		StartAppWrapper.loadAd();
+		#endif
+	}
+
+	public void ShowRewardedAds()
+	{
+		#if UNITY_ANDROID
+		StartAppWrapper.showAd();
+		StartAppWrapper.loadAd(StartAppWrapper.AdMode.REWARDED_VIDEO);
+		#endif   
+	}
+
+}
